@@ -4,6 +4,24 @@ import { chromium } from "playwright";
 const base = process.env.TEST_BASE_URL ?? "http://localhost:3000";
 const browser = await chromium.launch({ args: ["--no-sandbox"] });
 try {
+  const noJs = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: { width: 390, height: 844 },
+  });
+  const staticPage = await noJs.newPage();
+  await staticPage.goto(base);
+  await staticPage.getByLabel("Toggle navigation").click();
+  await staticPage
+    .getByRole("navigation", { name: "Mobile navigation" })
+    .getByRole("link", { name: "Templates" })
+    .click();
+  await staticPage.waitForURL("**/templates");
+  await staticPage
+    .getByRole("link", { name: "Customize", exact: true })
+    .first()
+    .click();
+  await staticPage.waitForURL("**/editor?template=royal-bengali");
+  await noJs.close();
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     reducedMotion: "reduce",
@@ -25,19 +43,19 @@ try {
     "Mobile landing must fit its viewport",
   );
   await page
-    .getByRole("button", { name: "Explore Templates", exact: true })
+    .getByRole("link", { name: "Explore Templates", exact: true })
     .click();
   await page.waitForURL("**/templates");
   assert.equal(
-    await page.getByRole("button", { name: "Customize", exact: true }).count(),
+    await page.getByRole("link", { name: "Customize", exact: true }).count(),
     6,
   );
   await page.getByRole("button", { name: "Minimal", exact: true }).click();
   assert.equal(
-    await page.getByRole("button", { name: "Customize", exact: true }).count(),
+    await page.getByRole("link", { name: "Customize", exact: true }).count(),
     1,
   );
-  await page.getByRole("button", { name: "Customize", exact: true }).click();
+  await page.getByRole("link", { name: "Customize", exact: true }).click();
   await page.waitForURL("**/editor?template=ivory-dreams");
   await page.getByLabel("Bride name").fill("Riya");
   await page.getByLabel("Groom name").fill("Rahul");

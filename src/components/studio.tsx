@@ -2,7 +2,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,11 +10,14 @@ import {
   Menu,
   Search,
   Sparkles,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type Template } from "@/lib/templates";
-type Page = "home" | "templates" | "dashboard" | "editor";
+const navigation = [
+  { label: "Home", href: "/" },
+  { label: "Templates", href: "/templates" },
+  { label: "Dashboard", href: "/dashboard" },
+];
 function money(n: number) {
   return "₹" + n.toLocaleString("en-IN");
 }
@@ -119,86 +121,75 @@ function Tag({
     </span>
   );
 }
-function Header({ page, setPage }: { page: Page; setPage: (p: Page) => void }) {
-  const [mobile, setMobile] = useState(false);
+function Header({ current }: { current: string }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[#eee5df] bg-[#fbf8f4]/95 backdrop-blur">
-      <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 lg:px-9">
-        <button
-          onClick={() => setPage("home")}
-          className="flex items-center gap-2.5"
-        >
+      <div className="relative mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 lg:px-9">
+        <Link href="/" className="flex items-center gap-2.5">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-wine text-[#f8d9ae]">
             <Heart size={19} fill="currentColor" />
           </span>
           <span className="serif text-2xl font-bold tracking-tight">
             vivah<span className="text-wine">studio.</span>
           </span>
-        </button>
-        <nav className="hidden items-center gap-8 md:flex">
-          {(["home", "templates", "dashboard"] as Page[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
+        </Link>
+        <nav
+          aria-label="Main navigation"
+          className="hidden items-center gap-8 md:flex"
+        >
+          {navigation.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              aria-current={current === href ? "page" : undefined}
               className={
-                "text-sm capitalize " +
-                (page === p
-                  ? "font-bold text-wine"
-                  : "text-[#6e625e] hover:text-wine")
+                current === href
+                  ? "text-sm font-bold text-wine"
+                  : "text-sm text-[#6e625e] hover:text-wine"
               }
             >
-              {p === "home" ? "Home" : p === "editor" ? "Editor" : p}
-            </button>
+              {label}
+            </Link>
           ))}
         </nav>
         <div className="hidden items-center gap-3 md:flex">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage("dashboard")}
-          >
-            My account
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard">My account</Link>
           </Button>
-          <Button size="sm" onClick={() => setPage("templates")}>
-            Create invitation <ArrowRight size={15} />
+          <Button asChild size="sm">
+            <Link href="/templates">
+              Create invitation <ArrowRight size={15} />
+            </Link>
           </Button>
         </div>
-        <button
-          className="md:hidden"
-          aria-label="Toggle navigation"
-          onClick={() => setMobile(!mobile)}
-        >
-          {mobile ? <X /> : <Menu />}
-        </button>
+        <details key={current} className="md:hidden">
+          <summary
+            aria-label="Toggle navigation"
+            className="flex size-11 cursor-pointer list-none items-center justify-center rounded-lg [&::-webkit-details-marker]:hidden"
+          >
+            <Menu aria-hidden />
+          </summary>
+          <nav
+            aria-label="Mobile navigation"
+            className="absolute inset-x-0 top-full flex flex-col gap-1 border-t bg-white px-5 py-3 shadow-soft"
+          >
+            {navigation.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={current === href ? "page" : undefined}
+                className="rounded-lg px-3 py-3 hover:bg-cream"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+        </details>
       </div>
-      {mobile && (
-        <nav className="flex flex-col gap-1 border-t bg-white px-5 py-3 md:hidden">
-          {(["home", "templates", "dashboard"] as Page[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => {
-                setPage(p);
-                setMobile(false);
-              }}
-              className="rounded-lg px-3 py-3 text-left capitalize hover:bg-cream"
-            >
-              {p}
-            </button>
-          ))}
-        </nav>
-      )}
     </header>
   );
 }
-function Home({
-  setPage,
-  onChoose,
-  catalog,
-}: {
-  setPage: (p: Page) => void;
-  onChoose: (id: string) => void;
-  catalog: Template[];
-}) {
+function Home({ catalog }: { catalog: Template[] }) {
   return (
     <>
       <section className="relative overflow-hidden">
@@ -217,15 +208,15 @@ function Home({
               Stunning designs, cinematic animations, and a link worth sharing.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => setPage("templates")}>
-                Create Your Invitation <ArrowRight size={18} />
+              <Button asChild size="lg">
+                <Link href="/templates">
+                  Create Your Invitation <ArrowRight size={18} />
+                </Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => setPage("templates")}
-              >
-                <Eye size={17} /> Explore Templates
+              <Button asChild size="lg" variant="outline">
+                <Link href="/templates">
+                  <Eye size={17} /> Explore Templates
+                </Link>
               </Button>
             </div>
             <div className="mt-11 flex flex-wrap gap-7 text-sm text-[#6f645e]">
@@ -284,17 +275,15 @@ function Home({
               Handcrafted templates for your once-in-a-lifetime celebration.
             </p>
           </div>
-          <Button variant="outline" onClick={() => setPage("templates")}>
-            View all templates <ArrowRight size={16} />
+          <Button asChild variant="outline">
+            <Link href="/templates">
+              View all templates <ArrowRight size={16} />
+            </Link>
           </Button>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {catalog.slice(0, 3).map((t) => (
-            <TemplateTile
-              key={t.id}
-              template={t}
-              onSelect={() => onChoose(t.id)}
-            />
+            <TemplateTile key={t.id} template={t} />
           ))}
         </div>
       </section>
@@ -310,25 +299,17 @@ function Home({
             Design your invitation, personalize every detail, and share it with
             everyone you love.
           </p>
-          <Button
-            className="mt-7"
-            size="lg"
-            onClick={() => setPage("templates")}
-          >
-            Create your invitation <ArrowRight size={17} />
+          <Button asChild className="mt-7" size="lg">
+            <Link href="/templates">
+              Create your invitation <ArrowRight size={17} />
+            </Link>
           </Button>
         </div>
       </section>
     </>
   );
 }
-function TemplateTile({
-  template,
-  onSelect,
-}: {
-  template: Template;
-  onSelect: () => void;
-}) {
+function TemplateTile({ template }: { template: Template }) {
   return (
     <Card className="group template-card overflow-hidden shadow-soft">
       <div className="relative h-[295px] overflow-hidden">
@@ -351,21 +332,15 @@ function TemplateTile({
           <Button asChild variant="outline" size="sm">
             <Link href={"/preview/" + template.id}>Preview</Link>
           </Button>
-          <Button size="sm" onClick={onSelect}>
-            Customize
+          <Button size="sm" asChild>
+            <Link href={"/editor?template=" + template.id}>Customize</Link>
           </Button>
         </div>
       </div>
     </Card>
   );
 }
-function Templates({
-  onChoose,
-  catalog,
-}: {
-  onChoose: (id: string) => void;
-  catalog: Template[];
-}) {
+function Templates({ catalog }: { catalog: Template[] }) {
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
   const shown = catalog.filter(
@@ -425,13 +400,7 @@ function Templates({
       {shown.length ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((t) => (
-            <TemplateTile
-              key={t.id}
-              template={t}
-              onSelect={() => {
-                onChoose(t.id);
-              }}
-            />
+            <TemplateTile key={t.id} template={t} />
           ))}
         </div>
       ) : (
@@ -450,17 +419,13 @@ export default function Studio({
   initialPage?: string;
   catalog: Template[];
 }) {
-  const router = useRouter();
   const page = initialPage === "templates" ? "templates" : "home";
-  const navigate = (to: Page) => router.push(to === "home" ? "/" : "/" + to);
-  const choose = (template: string) =>
-    router.push("/editor?template=" + template);
   return (
     <>
-      <Header page={page} setPage={navigate} />
+      <Header current={page === "home" ? "/" : "/templates"} />
       {page === "home" ? (
         <main>
-          <Home setPage={navigate} onChoose={choose} catalog={catalog} />
+          <Home catalog={catalog} />
           <section className="mx-auto max-w-6xl px-6 py-20">
             <h2 className="serif text-4xl">How it works</h2>
             <ol className="my-8 grid gap-6 sm:grid-cols-3">
@@ -513,7 +478,7 @@ export default function Studio({
           </section>
         </main>
       ) : (
-        <Templates onChoose={choose} catalog={catalog} />
+        <Templates catalog={catalog} />
       )}
       <footer className="border-t bg-white p-8 text-center text-sm text-muted">
         © Vivah Studio · <Link href="/templates">Templates</Link> ·{" "}

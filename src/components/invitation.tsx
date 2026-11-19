@@ -33,6 +33,7 @@ export function Invitation({
 
   async function open() {
     setOpening(true);
+    const fallback = setTimeout(() => setOpened(true), 2800);
     try {
       if (
         draft.motion &&
@@ -41,7 +42,7 @@ export function Invitation({
       ) {
         const { gsap } = await import("gsap");
         const [left, right] = Array.from(
-          curtains.current.querySelectorAll("i"),
+          curtains.current?.querySelectorAll("i") ?? [],
         );
         if (left && right)
           await gsap
@@ -52,6 +53,7 @@ export function Invitation({
     } catch {
       // The invitation remains accessible if the animation module cannot load.
     } finally {
+      clearTimeout(fallback);
       setOpened(true);
       requestAnimationFrame(() => title.current?.focus());
     }
@@ -120,7 +122,7 @@ export function Invitation({
                 disabled={opening}
                 onClick={() => void open()}
               >
-                Open invitation
+                {opening ? "Opening…" : "Open invitation"}
               </Button>
             </div>
           </div>

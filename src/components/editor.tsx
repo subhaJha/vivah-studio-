@@ -117,6 +117,7 @@ export function Editor({
 
   async function request(action: "save" | "publish", draft: Draft) {
     const response = await fetch("/api/workspace", {
+      signal: AbortSignal.timeout(15000),
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, revision: version.current, draft, action }),
@@ -219,6 +220,7 @@ export function Editor({
         const form = new FormData();
         form.set("file", file);
         const response = await fetch("/api/asset", {
+          signal: AbortSignal.timeout(20000),
           method: "POST",
           body: form,
         });
@@ -257,6 +259,7 @@ export function Editor({
 
   async function checkout() {
     setWorking(true);
+    setNotice("Preparing checkout…");
     try {
       if (!(await save.current(true))) return;
       if (!paymentMode) {
@@ -270,15 +273,22 @@ export function Editor({
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement("script");
           script.src = "https://checkout.razorpay.com/v1/checkout.js";
-          script.onload = () => resolve();
-          script.onerror = () => {
+          const fail = () => {
+            clearTimeout(timeout);
             script.remove();
-            reject(new Error("Checkout could not load."));
+            reject(new Error("Checkout could not load. Please try again."));
           };
+          const timeout = setTimeout(fail, 12000);
+          script.onload = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          script.onerror = fail;
           document.head.append(script);
         });
       if (!win.Razorpay) throw new Error("Checkout could not load.");
       const response = await fetch("/api/checkout", {
+        signal: AbortSignal.timeout(15000),
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -295,6 +305,7 @@ export function Editor({
           setNotice("Verifying payment…");
           try {
             const verified = await fetch("/api/checkout/verify", {
+              signal: AbortSignal.timeout(15000),
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(receipt),
