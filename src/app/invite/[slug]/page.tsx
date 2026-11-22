@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { InvitationViews } from "@/components/invitation-views";
 import { Invitation } from "@/components/invitation";
 import { draftSchema, slugSchema } from "@/lib/invitation";
 import { configured, db, media } from "@/lib/server";
@@ -33,7 +34,11 @@ export default async function PublicInvitation({ params }: Props) {
   const { slug } = await params;
   const draft = await snapshot(slug);
   if (!draft) notFound();
-  const assets = await media(draft);
-  await db().rpc("record_studio_view", { p_slug: slug });
-  return <Invitation draft={draft} slug={slug} assets={assets} />;
+  const assets = await media(draft).catch(() => ({}));
+  return (
+    <>
+      <InvitationViews slug={slug} />
+      <Invitation draft={draft} slug={slug} assets={assets} />
+    </>
+  );
 }

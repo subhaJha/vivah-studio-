@@ -312,14 +312,18 @@ function Home({ catalog }: { catalog: Template[] }) {
 function TemplateTile({ template }: { template: Template }) {
   return (
     <Card className="group template-card overflow-hidden shadow-soft">
-      <div className="relative h-[295px] overflow-hidden">
+      <Link
+        href={"/preview/" + template.id}
+        aria-label={"Preview " + template.title}
+        className="relative block h-[295px] overflow-hidden"
+      >
         <div className="h-full transition-transform duration-500 group-hover:scale-[1.035]">
           <TemplateArt template={template} compact />
         </div>
         <div className="absolute left-4 top-4">
           <Tag>{template.category}</Tag>
         </div>
-      </div>
+      </Link>
       <div className="flex items-center justify-between gap-3 p-5">
         <div>
           <h3 className="serif text-xl">{template.title}</h3>
@@ -348,7 +352,7 @@ function Templates({ catalog }: { catalog: Template[] }) {
       (category === "All" || t.category === category) &&
       `${t.title} ${t.description}`
         .toLowerCase()
-        .includes(search.toLowerCase()),
+        .includes(search.trim().toLowerCase()),
   );
   return (
     <main className="mx-auto max-w-7xl px-5 py-12 lg:px-9">
@@ -371,6 +375,7 @@ function Templates({ catalog }: { catalog: Template[] }) {
               <button
                 key={c}
                 onClick={() => setCategory(c)}
+                aria-pressed={category === c}
                 className={
                   "whitespace-nowrap rounded-full px-4 py-2 text-sm " +
                   (category === c

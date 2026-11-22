@@ -184,3 +184,11 @@ select:focus-visible {
     }
   }
 }
+
+.invitation-hero {
+  container-type: inline-size;
+}
+.invitation .invitation-names {
+  font-size: clamp(2.9rem, 11cqi, 5.5rem);
+  line-height: 1;
+}

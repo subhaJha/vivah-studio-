@@ -84,6 +84,7 @@ export function Editor({
   const [tab, setTab] = useState<(typeof tabs)[number]>("Couple");
   const [device, setDevice] = useState<"mobile" | "desktop">("mobile");
   const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
   const [working, setWorking] = useState(false);
   const [assets, setAssets] = useState(initialAssets);
   const [live, setLive] = useState(published);
@@ -150,6 +151,7 @@ export function Editor({
           );
         return false;
       }
+      if (!demo) setSaving(true);
       const operation = (async () => {
         try {
           if (demo) {
@@ -178,6 +180,7 @@ export function Editor({
           return false;
         } finally {
           pending.current = null;
+          if (!demo) setSaving(false);
         }
       })();
       // The demo write has no await and completes immediately.
@@ -354,7 +357,7 @@ export function Editor({
 
   return (
     <main className="min-h-screen">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b bg-white px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e7d7ca] bg-white px-5 py-4">
         <div>
           <Link
             href={demo ? "/templates" : "/dashboard"}
@@ -369,7 +372,7 @@ export function Editor({
           <Button
             size="sm"
             variant="outline"
-            disabled={working || !ready}
+            disabled={working || saving || !ready}
             onClick={() =>
               void save.current(true).then((ok) => {
                 if (ok)
@@ -379,7 +382,7 @@ export function Editor({
               })
             }
           >
-            Save draft
+            {saving ? "Saving…" : "Save draft"}
           </Button>
           <Button
             size="sm"
@@ -409,13 +412,20 @@ export function Editor({
         </div>
       </header>
       <p aria-live="polite" className="min-h-10 px-5 py-2 text-sm text-wine">
-        {notice ||
-          (demo
-            ? "Demo workspace · Drafts stay in this browser. Uploaded media is previewed for this session."
-            : live
-              ? "Published · Draft edits are private until republished."
-              : "Private draft")}
+        {saving
+          ? "Saving your draft to your account…"
+          : notice ||
+            (demo
+              ? "Demo workspace · Drafts stay in this browser. Uploaded media is previewed for this session."
+              : live
+                ? "Published · Draft edits are private until republished."
+                : "Private draft")}
       </p>
+      <div className="mx-5 mb-4 lg:hidden">
+        <Button size="sm" variant="outline" asChild>
+          <a href="#preview">Jump to preview ↓</a>
+        </Button>
+      </div>
       <div className="grid lg:grid-cols-[minmax(310px,380px)_1fr]">
         <details open className="border-b border-r bg-white p-5">
           <summary className="mb-3 cursor-pointer font-semibold">
@@ -599,6 +609,28 @@ export function Editor({
                     onChange={(e) => setValue("color", e.target.value)}
                   />
                 </Field>
+                <div
+                  aria-label="Accent presets"
+                  role="group"
+                  className="flex flex-wrap gap-2"
+                >
+                  {Object.entries({
+                    Burgundy: "#7c243e",
+                    Champagne: "#b58a56",
+                    Emerald: "#356954",
+                    Rose: "#ac5c71",
+                  }).map(([name, color]) => (
+                    <button
+                      key={color}
+                      type="button"
+                      aria-label={name}
+                      aria-pressed={values.color === color}
+                      onClick={() => setValue("color", color)}
+                      className="size-10 rounded-full border-2 border-white shadow ring-offset-2 aria-pressed:ring-2 aria-pressed:ring-wine"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
                 {values.color && (
                   <Button
                     variant="outline"
@@ -771,7 +803,10 @@ export function Editor({
             )}
           </div>
         </details>
-        <section id="preview" className="min-w-0 px-3 pb-10 sm:px-8">
+        <section
+          id="preview"
+          className="min-w-0 scroll-mt-4 bg-[#f6eee7] px-3 py-6 sm:px-8"
+        >
           <div className="mx-auto mb-4 flex max-w-5xl flex-wrap items-center justify-between gap-2">
             <h2 className="serif text-2xl">Live preview</h2>
             <div className="flex gap-2">
@@ -789,7 +824,7 @@ export function Editor({
             </div>
           </div>
           <div
-            className={`mx-auto overflow-hidden rounded-[1.75rem] border-[7px] border-[#342c2b] shadow-soft ${device === "mobile" ? "max-w-[380px]" : "max-w-5xl"}`}
+            className={`mx-auto overflow-hidden rounded-[1.75rem] border-[5px] border-[#53333c] shadow-soft ${device === "mobile" ? "max-w-[380px]" : "max-w-5xl"}`}
           >
             <Invitation editor draft={values} assets={assets} />
           </div>
