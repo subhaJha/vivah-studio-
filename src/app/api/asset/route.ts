@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { db, failed, sameOrigin, user } from "@/lib/server";
 
@@ -39,13 +40,39 @@ export async function POST(req: Request) {
   if (!(file instanceof File) || file.size === 0 || file.size > 3145728)
     return failed("Choose a file up to 3 MB.");
   const format = formats[file.type];
-  const bytes = Buffer.from(await file.arrayBuffer());
+  let bytes = Buffer.from(await file.arrayBuffer());
   if (!format || !format.matches(bytes))
     return failed("Upload a valid JPEG, PNG, WebP, or MP3.");
-  const path = customer.id + "/" + randomUUID() + "." + format.extension;
+  let contentType = file.type;
+  let extension = format.extension;
+  if (file.type.startsWith("image/")) {
+    try {
+      bytes = await sharp(bytes, {
+        limitInputPixels: 25000000,
+        failOn: "warning",
+      })
+        .rotate()
+        .resize({
+          width: 2000,
+          height: 2000,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 84 })
+        .toBuffer();
+    } catch {
+      return failed(
+        "The photo could not be decoded. Choose a valid image up to 25 megapixels.",
+      );
+    }
+    if (bytes.length > 3145728) return failed("Choose a smaller photo.", 413);
+    contentType = "image/webp";
+    extension = "webp";
+  }
+  const path = customer.id + "/" + randomUUID() + "." + extension;
   const database = db();
   const bucket = database.storage.from("invitation-media");
-  const result = await bucket.upload(path, bytes, { contentType: file.type });
+  const result = await bucket.upload(path, bytes, { contentType });
   if (result.error) return failed("Upload failed.", 503);
   const record = await database
     .from("invitation_assets")

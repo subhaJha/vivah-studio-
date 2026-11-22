@@ -24,6 +24,9 @@ export function Invitation({
   const [opening, setOpening] = useState(false);
   const [notice, setNotice] = useState("");
   const [attending, setAttending] = useState(true);
+  const [sending, setSending] = useState(false);
+  const submission = useRef<{ key: string; id: string } | null>(null);
+  const inFlight = useRef(false);
   const curtains = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const photo =
@@ -235,30 +238,54 @@ export function Invitation({
               {slug ? (
                 <form
                   className="grid gap-3 text-left"
-                  action={async (form) => {
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    if (inFlight.current) return;
+                    const element = event.currentTarget;
+                    const form = new FormData(element);
+                    const fields = {
+                      name: form.get("name"),
+                      attending,
+                      guests: attending ? Number(form.get("guests")) : 0,
+                      message: form.get("message"),
+                    };
+                    const key = JSON.stringify(fields);
+                    if (submission.current?.key !== key)
+                      submission.current = { key, id: crypto.randomUUID() };
+                    inFlight.current = true;
+                    setSending(true);
                     setNotice("Sending…");
                     try {
                       const response = await fetch("/api/rsvp/" + slug, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                          name: form.get("name"),
-                          attending,
-                          guests: attending ? Number(form.get("guests")) : 0,
-                          message: form.get("message"),
+                          ...fields,
+                          submissionId: submission.current.id,
                         }),
+                        signal: AbortSignal.timeout(12000),
                       });
-                      setNotice(
-                        response.ok
-                          ? "Thank you. Your RSVP was received."
-                          : response.status === 429
+                      if (response.ok) {
+                        element.reset();
+                        setAttending(true);
+                        submission.current = null;
+                        setNotice("Thank you. Your RSVP was received.");
+                      } else {
+                        setNotice(
+                          response.status === 429
                             ? "Too many submissions. Please try again later."
-                            : "We could not accept the RSVP. Check your details and try again.",
-                      );
+                            : response.status === 404
+                              ? "RSVPs are closed for this invitation."
+                              : "We could not accept the RSVP. Please try again.",
+                        );
+                      }
                     } catch {
                       setNotice(
                         "The RSVP could not be sent. Please try again.",
                       );
+                    } finally {
+                      setSending(false);
+                      inFlight.current = false;
                     }
                   }}
                 >
@@ -304,7 +331,9 @@ export function Invitation({
                       maxLength={500}
                     />
                   </label>
-                  <Button type="submit">Send RSVP</Button>
+                  <Button type="submit" disabled={sending}>
+                    {sending ? "Sending…" : "Send RSVP"}
+                  </Button>
                   <p role="status">{notice}</p>
                 </form>
               ) : (

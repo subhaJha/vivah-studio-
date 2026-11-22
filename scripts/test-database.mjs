@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 
@@ -15,15 +16,12 @@ try {
     create schema storage;
     create table storage.buckets(id text primary key,name text,public boolean,file_size_limit int,allowed_mime_types text[]);
   `);
-  await pg.exec(
-    await readFile(
-      new URL(
-        "../supabase/migrations/202611180001_studio.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  );
+  const migrations = new URL("../supabase/migrations/", import.meta.url);
+  for (const name of (await readdir(migrations))
+    .filter((name) => name.endsWith(".sql"))
+    .sort()) {
+    await pg.exec(await readFile(new URL(name, migrations), "utf8"));
+  }
   const owner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const guest = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const id = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -59,12 +57,25 @@ try {
     "insert into public.orders(provider_order,invitation,template,amount) values('order_test',$1,'royal-bengali',99900)",
     [id],
   );
-  await pg.exec(
-    "select public.record_studio_payment('pay_test','order_test','failed')",
-  );
+  const payment = (fingerprint, id, status, amount = 99900) =>
+    scalar("select public.process_studio_payment($1,$2,'order_test',$3,$4)", [
+      fingerprint.repeat(64),
+      id,
+      status,
+      amount,
+    ]);
+  assert.equal(await payment("a", "pay_test", "failed"), "recorded");
   assert.equal(await publish(1), "payment");
-  await pg.exec(
-    "select public.record_studio_payment('pay_test','order_test','captured'); select public.record_studio_payment('pay_test','order_test','failed');",
+  assert.equal(await payment("b", "pay_test", "captured", 1), "mismatch");
+  assert.equal(await payment("b", "pay_test", "captured"), "recorded");
+  assert.equal(await payment("b", "pay_test", "captured"), "duplicate");
+  assert.equal(await payment("c", "pay_test", "failed"), "recorded");
+  assert.equal(await payment("d", "pay_other", "captured"), "duplicate");
+  assert.equal(
+    await scalar(
+      "select count(*) from public.payments where status='captured'",
+    ),
+    1,
   );
   assert.equal(await publish(1), "published");
   assert.equal(await save(1, { ...draft, bride: "Aparna" }), 2);
@@ -84,18 +95,26 @@ try {
     await scalar("select views from public.invitation_analytics"),
     2,
   );
-  const rsvp = () =>
-    scalar("select public.submit_studio_rsvp('ananya-arjun','bucket',$1)", [
-      JSON.stringify({
-        name: "Guest",
-        attending: true,
-        guests: 2,
-        message: "",
-      }),
-    ]);
-  for (let index = 0; index < 5; index++)
+  const rsvp = (submission = randomUUID()) =>
+    scalar(
+      "select public.submit_studio_rsvp_once('ananya-arjun','bucket',$1,$2)",
+      [
+        JSON.stringify({
+          name: "Guest",
+          attending: true,
+          guests: 2,
+          message: "",
+        }),
+        submission,
+      ],
+    );
+  const firstSubmission = randomUUID();
+  assert.equal(await rsvp(firstSubmission), "accepted");
+  assert.equal(await rsvp(firstSubmission), "accepted");
+  for (let index = 0; index < 4; index++)
     assert.equal(await rsvp(), "accepted");
   assert.equal(await rsvp(), "limited");
+  assert.equal(await rsvp(firstSubmission), "accepted");
   assert.equal(
     await scalar("select public.studio_admin_overview()->>'revenue'"),
     "99900",
@@ -106,6 +125,10 @@ try {
   ]);
   assert.equal(await scalar("select count(*) from public.invitations"), 0);
   assert.equal(await scalar("select count(*) from public.rsvp_responses"), 0);
+  await assert.rejects(
+    () => pg.query("select * from public.studio_payment_events"),
+    /permission denied/,
+  );
   await assert.rejects(
     () => pg.query("select * from public.publications"),
     /permission denied/,

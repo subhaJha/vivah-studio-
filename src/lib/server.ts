@@ -54,6 +54,11 @@ export async function auth() {
 export const user = cache(async () => {
   if (!configured()) return null;
   const { data } = await (await auth()).auth.getUser();
+  if (
+    data.user?.banned_until &&
+    Date.parse(data.user.banned_until) > Date.now()
+  )
+    return null;
   return data.user;
 });
 export async function media(draft: Draft) {

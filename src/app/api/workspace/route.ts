@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if (row.error) return failed("Unable to load the saved draft.", 503);
     if (
       !row.data ||
-      JSON.stringify(draftSchema.parse(row.data.draft)) !==
+      JSON.stringify(draftSchema.safeParse(row.data.draft).data) !==
         JSON.stringify(draft)
     )
       return failed("Save the latest draft before publishing.", 409);
@@ -73,10 +73,27 @@ export async function POST(req: Request) {
     p_draft: draft,
   });
   if (error) return failed("Could not save your draft.", 503);
-  if (!data)
+  if (!data) {
+    const existing = await database
+      .from("invitations")
+      .select("draft,revision")
+      .eq("id", id)
+      .eq("owner", customer.id)
+      .eq("revision", revision + 1)
+      .maybeSingle();
+    if (existing.error)
+      return failed("Could not verify the saved revision.", 503);
+    const stored = draftSchema.safeParse(existing.data?.draft);
+    if (
+      stored.success &&
+      JSON.stringify(stored.data) === JSON.stringify(draft)
+    ) {
+      return Response.json({ revision: existing.data!.revision });
+    }
     return failed(
       "This draft was edited elsewhere. Keep this tab open and reload in another tab to reconcile your changes.",
       409,
     );
+  }
   return Response.json({ revision: data });
 }
