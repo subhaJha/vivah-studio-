@@ -33,7 +33,11 @@ export function Invitation({
 
   async function open() {
     setOpening(true);
-    const fallback = setTimeout(() => setOpened(true), 2800);
+    const reveal = () => {
+      setOpened(true);
+      requestAnimationFrame(() => title.current?.focus());
+    };
+    const fallback = setTimeout(reveal, 2800);
     try {
       if (
         draft.motion &&
@@ -54,14 +58,14 @@ export function Invitation({
       // The invitation remains accessible if the animation module cannot load.
     } finally {
       clearTimeout(fallback);
-      setOpened(true);
-      requestAnimationFrame(() => title.current?.focus());
+      if (curtains.current) reveal();
     }
   }
 
   return (
     <MotionConfig reducedMotion="user">
       <article
+        data-motion={draft.motion && (!cinematic || opened) ? "on" : "off"}
         style={{ background: template.theme, color: template.accent }}
         className={
           "invitation " + template.id + (draft.font === "serif" ? " serif" : "")
@@ -73,7 +77,7 @@ export function Invitation({
         >
           <section
             className={
-              "relative grid min-h-[590px] place-content-center px-8 py-20 text-center " +
+              "invitation-hero relative grid min-h-[min(780px,85svh)] place-content-center px-8 py-24 text-center " +
               (draft.background === "pattern" ? "pattern" : "")
             }
           >
@@ -84,23 +88,37 @@ export function Invitation({
               />
             )}
             {draft.ornaments && (
-              <motion.div
-                initial={draft.motion ? { opacity: 0 } : false}
-                animate={{ opacity: 1 }}
+              <div
+                className="invitation-ornament pointer-events-none mb-7 text-5xl"
                 aria-hidden
-                className="mb-6 text-5xl"
               >
                 {template.flower}
-              </motion.div>
+              </div>
             )}
-            <p className="text-xs uppercase tracking-[.22em]">
+            <p className="invitation-arrive text-xs uppercase tracking-[.22em]">
               Together with our families
             </p>
-            <h1 ref={title} tabIndex={-1} className="my-8 text-5xl sm:text-6xl">
+            <h1
+              ref={title}
+              tabIndex={-1}
+              className="invitation-arrive invitation-names my-8 text-5xl sm:text-7xl"
+            >
               {draft.bride || "Bride"} <em>&amp;</em> {draft.groom || "Groom"}
             </h1>
-            <p className="mx-auto max-w-md leading-relaxed">{draft.message}</p>
-            <p className="mt-8 text-lg">{dateLabel(draft.date)}</p>
+            <p className="invitation-arrive invitation-message mx-auto max-w-md leading-relaxed">
+              {draft.message}
+            </p>
+            <p className="invitation-arrive invitation-date mt-8 text-lg">
+              {dateLabel(draft.date)}
+            </p>
+            {!editor && (
+              <a
+                href="#celebration"
+                className="invitation-arrive invitation-date mx-auto mt-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-current px-5 text-sm"
+              >
+                The celebration <span aria-hidden>↓</span>
+              </a>
+            )}
           </section>
         </div>
         {cinematic && !opened && (
@@ -111,7 +129,10 @@ export function Invitation({
             <i className="silk-curtain absolute inset-y-0 left-0 w-1/2 border-r-2 border-[#bb8b50]" />
             <i className="silk-curtain absolute inset-y-0 right-0 w-1/2 border-l-2 border-[#bb8b50]" />
             <div className="relative p-8 text-center">
-              <div className="mb-5 text-5xl" aria-hidden>
+              <div
+                className="invitation-curtain-crest mb-5 text-5xl"
+                aria-hidden
+              >
                 ❦
               </div>
               <p className="mb-6 text-2xl">
@@ -128,18 +149,14 @@ export function Invitation({
           </div>
         )}
         <div
+          id={editor ? undefined : "celebration"}
           hidden={cinematic && !opened}
           style={{ borderColor: draft.color || template.accent }}
-          className="border-t-4 bg-[#fcf5eb] px-7 py-14 text-center text-[#522b35]"
+          className="invitation-celebration border-t-4 bg-[#fcf5eb] px-7 py-16 text-center text-[#522b35]"
         >
           {photo && (
             <section aria-label="The couple">
-              <motion.div
-                initial={draft.motion && !editor ? { opacity: 0 } : false}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                className="mx-auto mb-10 max-w-lg overflow-hidden rounded-t-[12rem]"
-              >
+              <div className="invitation-reveal mx-auto mb-10 max-w-lg overflow-hidden rounded-t-[12rem] shadow-soft">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   alt={`${draft.bride} and ${draft.groom}`}
@@ -147,7 +164,7 @@ export function Invitation({
                   loading="lazy"
                   className="w-full object-cover"
                 />
-              </motion.div>
+              </div>
               <p className="mx-auto mb-9 max-w-sm italic">{draft.message}</p>
             </section>
           )}
@@ -160,25 +177,32 @@ export function Invitation({
               aria-label="Background music"
             />
           )}
-          <h2 className="text-3xl">The wedding</h2>
-          <p className="mt-4">
-            {[dateLabel(draft.date), draft.time].filter(Boolean).join(" · ")}
-          </p>
-          <p>{draft.venue}</p>
-          <p>{draft.address}</p>
-          {draft.maps && (
-            <a
-              className="mt-3 inline-block underline"
-              href={draft.maps}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Get directions
-            </a>
-          )}
+          <section className="invitation-reveal mx-auto max-w-xl rounded-3xl border border-[#d6b992] bg-white/70 px-6 py-10">
+            <span className="mb-3 block text-3xl text-wine" aria-hidden>
+              {template.flower}
+            </span>
+            <h2 className="text-4xl">The wedding</h2>
+            <p className="mt-4">
+              {[dateLabel(draft.date), draft.time].filter(Boolean).join(" · ")}
+            </p>
+            <p className="mt-3 text-lg font-semibold">{draft.venue}</p>
+            <p>{draft.address}</p>
+            {draft.maps && (
+              <a
+                className="mt-4 inline-flex min-h-11 items-center underline"
+                href={draft.maps}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Get directions
+              </a>
+            )}
+          </section>
           {draft.events.length > 0 && (
-            <section className="mx-auto mt-12 max-w-xl">
-              <h2 className="mb-6 text-3xl">Celebration itinerary</h2>
+            <section className="mx-auto mt-16 max-w-xl">
+              <h2 className="invitation-reveal mb-7 text-4xl">
+                Celebration itinerary
+              </h2>
               <ol className="grid gap-3">
                 {draft.events.map((event, i) => (
                   <motion.li
@@ -188,7 +212,11 @@ export function Invitation({
                     }
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="rounded-2xl border bg-white p-4"
+                    transition={{
+                      duration: 0.55,
+                      delay: Math.min(i, 4) * 0.07,
+                    }}
+                    className="rounded-2xl border border-[#dec7ad] bg-white p-5 shadow-soft"
                   >
                     <strong>{event.name}</strong>
                     <p>
@@ -202,7 +230,7 @@ export function Invitation({
             </section>
           )}
           {draft.rsvp && (
-            <section className="mx-auto mt-12 max-w-md">
+            <section className="invitation-reveal mx-auto mt-16 max-w-md rounded-3xl border border-[#dec7ad] bg-white/75 p-6">
               <h2 className="mb-4 text-3xl">Kindly RSVP</h2>
               {slug ? (
                 <form

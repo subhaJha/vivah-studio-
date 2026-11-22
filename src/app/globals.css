@@ -133,3 +133,54 @@ select:focus-visible {
     }
   }
 }
+
+.invitation-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at top, #ffe5ab29, transparent 67%);
+}
+.invitation-celebration {
+  background-image: radial-gradient(
+    ellipse at top,
+    #e8be882e,
+    transparent 36rem
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .invitation[data-motion="on"] .invitation-arrive {
+    animation: invitation-arrive 0.85s cubic-bezier(0.17, 0.68, 0.28, 1) both;
+  }
+  .invitation[data-motion="on"] .invitation-names {
+    animation-delay: 0.11s;
+  }
+  .invitation[data-motion="on"] .invitation-message {
+    animation-delay: 0.24s;
+  }
+  .invitation[data-motion="on"] .invitation-date {
+    animation-delay: 0.36s;
+  }
+  .invitation[data-motion="on"] .invitation-ornament {
+    animation: invitation-bloom 0.95s ease-out both;
+  }
+  @keyframes invitation-arrive {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+  @keyframes invitation-bloom {
+    from {
+      opacity: 0;
+      transform: scale(0.55) rotate(-30deg);
+    }
+  }
+  @supports (animation-timeline: view()) {
+    .invitation[data-motion="on"] .invitation-reveal {
+      animation: invitation-arrive linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 30%;
+    }
+  }
+}

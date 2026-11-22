@@ -92,7 +92,8 @@ try {
   await page.getByRole("button", { name: "Open invitation" }).click();
   await page.getByRole("heading", { name: "Ananya & Arjun" }).waitFor();
   await page.getByRole("heading", { name: "Celebration itinerary" }).waitFor();
-  assert.equal((await page.goto(base + "/admin")).status(), 404);
+  assert.equal((await page.goto(base + "/admin")).status(), 200);
+  await page.getByText("Admin setup", { exact: true }).waitFor();
   assert.equal(
     (await page.goto(base + "/invite/unknown-wedding")).status(),
     404,
@@ -110,6 +111,15 @@ try {
   await animated.getByRole("button", { name: "Open invitation" }).click();
   await animated.getByRole("heading", { name: "Ananya & Arjun" }).waitFor();
   await animated.getByRole("heading", { name: "Kindly RSVP" }).waitFor();
+  await animated.goto(base + "/preview/ivory-dreams");
+  const names = animated.getByRole("heading", { name: "Ananya & Arjun" });
+  assert.equal(
+    await names.evaluate((node) => getComputedStyle(node).animationName),
+    "invitation-arrive",
+  );
+  await animated.getByRole("link", { name: "The celebration" }).click();
+  assert.equal(new URL(animated.url()).hash, "#celebration");
+
   console.log(
     "Browser checks passed for mobile landing, marketplace filtering, the editor, demo persistence, protections, and both curtain modes.",
   );

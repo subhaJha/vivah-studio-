@@ -3,10 +3,11 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { signIn } from "./actions";
 
-export function LoginForm() {
+export function LoginForm({ admin = false }: { admin?: boolean }) {
   const [notice, action, pending] = useActionState(signIn, "");
   return (
     <form action={action} className="mt-6 grid gap-4">
+      {admin && <input type="hidden" name="next" value="admin" />}
       <label>
         Email
         <input
@@ -33,14 +34,16 @@ export function LoginForm() {
         <Button disabled={pending} name="intent" value="login">
           Sign in
         </Button>
-        <Button
-          disabled={pending}
-          name="intent"
-          value="register"
-          variant="outline"
-        >
-          Register
-        </Button>
+        {!admin && (
+          <Button
+            disabled={pending}
+            name="intent"
+            value="register"
+            variant="outline"
+          >
+            Register
+          </Button>
+        )}
       </div>
       <p role="status">{notice}</p>
     </form>

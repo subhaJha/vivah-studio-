@@ -26,6 +26,11 @@ export async function signIn(_state: string, form: FormData) {
   const result = await client.auth.signInWithPassword(parsed.data);
   if (result.error)
     return "Could not sign in. Check your credentials and confirm your email.";
+  if (
+    form.get("next") === "admin" &&
+    result.data.user?.app_metadata.role === "admin"
+  )
+    redirect("/admin");
   redirect("/dashboard");
 }
 export async function signOut() {
